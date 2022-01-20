@@ -3,7 +3,8 @@ import os
 import asyncio
 from discord.ext import commands
 
-print(os.environ)
+print("Starting Bot...")
+#print(os.environ)
 
 TOKEN = os.getenv("discordToken") #put token in system enviroment variables
 if TOKEN == None:
@@ -11,7 +12,8 @@ if TOKEN == None:
 
 
 async def disconnectFromCTX(ctx):
-    await ctx.voice_client.disconnect()
+    if not ctx.voice_client.is_playing():
+        await ctx.voice_client.disconnect()
 
 async def testAsync():
     print("test")
@@ -39,6 +41,9 @@ class sound(commands.Cog):
     async def play(self, ctx, *, query):
         """Plays a file from the local filesystem"""
 
+        if ctx.voice_client is None:
+            return
+        
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(query))
         ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else self.bot.loop.create_task(disconnectFromCTX(ctx)))
         #https://www.programcreek.com/python/?code=python-discord%2Fseasonalbot%2Fseasonalbot-master%2Fbot%2Fexts%2Fhalloween%2Fspookysound.py
@@ -59,7 +64,7 @@ class sound(commands.Cog):
                 await ctx.author.voice.channel.connect()
             else:
                 await ctx.send("You are not connected to a voice channel.")
-                raise commands.CommandError("Author not connected to a voice channel.")
+                #raise commands.CommandError("Author not connected to a voice channel.")
         elif ctx.voice_client.is_playing():
             ctx.voice_client.stop()
 
