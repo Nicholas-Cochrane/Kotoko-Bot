@@ -2,7 +2,7 @@ from lxml import html
 from lxml.etree import Comment
 import requests
 import html2text
-import pwb
+#import pwb
 import pywikibot
 
 page = requests.get('https://en.wikipedia.org/wiki/Wolf')
@@ -15,10 +15,10 @@ print(html2text.html2text(str(html.tostring(body))))
 https://en.wikipedia.org/w/api.php?action=query&format=json&titles=wolf&prop=extracts&exintro&explaintext
 """
 """https://wiki.ss13.co/api.php?action=query&prop=revisions&rvprop=content&format=json&titles=Cluwne"""
-https://wiki.ss13.co/Special:Version
+"""https://wiki.ss13.co/Special:Version
 https://www.mediawiki.org/wiki/Special:Version
-https://www.mediawiki.org/wiki/Extension:TextExtracts
-"""text = ""
+https://www.mediawiki.org/wiki/Extension:TextExtracts"""
+text = ""
 
 text = text + (tree.xpath('//h1[@id="firstHeading"]')[0].text) + ". "
 text = text + ((tree.xpath('//div[@id="bodyContent"]')[0]).xpath('//div[@id="siteSub"]')[0].text)
@@ -34,4 +34,4 @@ def recrusiveRead(tag):
         recrusiveRead(subtag)
         
 for tag in plist[2]:
-    recrusiveRead(tag)"""
+    recrusiveRead(tag)
