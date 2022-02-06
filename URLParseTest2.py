@@ -32,17 +32,25 @@ def wikitextClean(str):
     '''clean up wikitext remove [[]], =, and \'\'\' '''
     markedStr = str.replace('[[','[[@inside@').replace('%26', '&') #add marker for inside of link and clean up &'s from link safe to normal
     temp = re.split('\[\[|\]\]',markedStr) #split on links [[X]] -> X
+    #print('split list')
     for index, substring in enumerate(temp):
         x = substring.find('|')
-        if (x != -1):
-            temp[index] = substring[x+1:] #replace [[A|B]] -> B
+        y = substring.find('@inside@')
+        if (x != -1 and y != -1):
+            #print(temp[index])
+            if(substring.find('@inside@File:') != -1):
+                temp[index] = '' #if link is a file remove link
+            else:
+                temp[index] = substring[x+1:] #replace [[A|B]] -> B
+            #print(temp[index])
             
         if(temp[index].find(':')!= -1 and temp[index].find('@inside@')!= -1):
             temp[index] = '' #remove [[X]]'s that contain a : EX: [[Catagory:verb]]->Verb
-        #todo ignore <code> tags (modifiy html stripper or pre htlm stripper)
-        #todo remove links and clean up or remove tables
+        #TODO ignore <code> tags (modifiy html stripper or pre htlm stripper)
+        #TODO remove links
+    #   #TODO [[Wiktionary:hello|]] -> hello Currently deletes link (rare and a pain to parse)
     newStr = ''.join(temp).replace('@inside@','').replace('=','').replace('\'\'\'','')#remove fromating like == and ''' 
-    return re.sub('( \s*)\n','\n',re.sub('__.*?__','',newStr)) #remove__X__ used for things like table of contents and can be in templates and remove empty lines
+    return re.sub('( \s*)\n','\n',re.sub('(\n(!|\|).*?(\n|\Z)((!|\|).*?(\n|\Z))*)|({\| class).*','\n',re.sub('__.*?__','',newStr))) #Remove extra whitespace(remove lines for wikitables including any line starting with ! or | (remove __X__ ex: __TOC__))
      
 #https://en.wikipedia.org/w/api.php?action=help&modules=parse
 #https://www.mediawiki.org/wiki/API:Query
@@ -51,19 +59,19 @@ with urllib.request.urlopen('https://en.wikipedia.org/w/api.php?action=query&for
     pageObj = json.loads(f.read())
     for key, value in pageObj['query']['pages'].items():
         print("\n")
-        print(pageObj['query']['pages'][key]['title'])
-        print(pageObj['query']['pages'][key]['extract'])
+        #print(pageObj['query']['pages'][key]['title'])
+        #print(pageObj['query']['pages'][key]['extract'])
 
 #with user agent defined as mozilla to avoid simple bot detection
 req = urllib.request.Request('https://wiki.ss13.co/api.php?action=query&prop=revisions&rvprop=content&format=json&titles=Cluwne')
-# Customize the default User-Agent header value:
+#Customize the default User-Agent header value:
 req.add_header('User-Agent', 'Mozilla/5.0')
 with urllib.request.urlopen(req) as r:
     pageObj2 = json.loads(r.read())
     for key, value in pageObj2['query']['pages'].items():
         print("\n")
-        print(pageObj2['query']['pages'][key]['title'])
-        print(wikitextClean(pageObj2['query']['pages'][key]['revisions'][0]['*']))
+        #print(pageObj2['query']['pages'][key]['title'])
+        #print(wikitextClean(pageObj2['query']['pages'][key]['revisions'][0]['*']))
 
 req2 = urllib.request.Request("https://wiki.warthunder.com/api.php?action=query&prop=revisions&rvprop=content&format=json&titles=Wyvern_S4")
 # Customize the default User-Agent header value:
@@ -84,9 +92,12 @@ with urllib.request.urlopen(req2) as r2:
         req3.add_header('User-Agent', 'Mozilla/5.0')
         with urllib.request.urlopen(req3) as r3:
             pageObj4 = json.loads(r3.read())
-            for key, value in pageObj4.items():
-               #print(strip_tags(pageObj4['expandtemplates']['wikitext']))
+            for key, value in pageObj4['expandtemplates'].items():
+               print('pre wikitext func')
+               print((pageObj4['expandtemplates']['wikitext']))
+               print('post')
                print(wikitextClean(strip_tags(pageObj4['expandtemplates']['wikitext'])))
-    
+
+               
 #tts = gtts.gTTS(wikitextClean(strip_tags(pageObj4['expandtemplates']['wikitext'])))
 #tts.save("test.mp3")
