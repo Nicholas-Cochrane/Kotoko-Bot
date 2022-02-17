@@ -53,6 +53,7 @@ def wikitextClean(str):
 
 def wikiURLParse(page):
     """"Returns a tuple of (domain, filename) """
+    #TODO add error handling
     parsedPage = urlparse(page)
     splitPath = re.split('/',parsedPage.path)
     if(not parsedPage.netloc): #if url does not start with scheme
@@ -115,8 +116,7 @@ def wikimediaURLToText(page):
                        #print(wikitextClean(strip_tags(pageObj4['expandtemplates']['wikitext'])))
                        finalTexts.append(pageObj2['query']['pages'][key]['title'] + ' at ' + netloc + wikitextClean(strip_tags(pageObj4['expandtemplates']['wikitext'])))
     return finalTexts[0]
-
-test = input("Enter a Wikipedia or Wikimedia Wiki page URL:")
-print(wikimediaURLToText(test))
+#test = input("Enter a Wikipedia or Wikimedia Wiki page URL:")
+#print(wikimediaURLToText(test))
 #tts = gtts.gTTS(wikitextClean(strip_tags(pageObj4['expandtemplates']['wikitext'])))
 #tts.save("sounds/test.mp3")

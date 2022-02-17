@@ -1,6 +1,7 @@
 import discord
 import os
 import asyncio
+import customwikiparser as wikiparser
 from discord.ext import commands
 
 print("Starting Bot...")
@@ -52,7 +53,10 @@ class sound(commands.Cog):
         #https://www.programcreek.com/python/?code=python-discord%2Fseasonalbot%2Fseasonalbot-master%2Fbot%2Fexts%2Fhalloween%2Fspookysound.py
 
         await ctx.send('Now playing: {}'.format(fileName))
-
+    @commands.command()
+    async def wiki(self, ctx, *, URL):
+        name = wikiparser.wikiURLParse(URL)
+        print(name)
 
     @commands.command()
     async def stop(self, ctx):
