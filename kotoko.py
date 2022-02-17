@@ -10,6 +10,9 @@ TOKEN = os.getenv("discordToken") #put token in system enviroment variables
 if TOKEN == None:
     raise Exception("No token was found.")
 
+bot = commands.Bot(command_prefix=commands.when_mentioned_or("!"),
+                   description='Relatively simple test bot')
+
 
 async def disconnectFromCTX(ctx):
     if not ctx.voice_client.is_playing():
@@ -38,17 +41,17 @@ class sound(commands.Cog):
         await channel.connect()
 
     @commands.command()
-    async def play(self, ctx, *, query):
+    async def play(self, ctx, *, fileName):
         """Plays a file from the local filesystem"""
 
         if ctx.voice_client is None:
             return
         
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(query))
+        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("sounds\\"+fileName))
         ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else self.bot.loop.create_task(disconnectFromCTX(ctx)))
         #https://www.programcreek.com/python/?code=python-discord%2Fseasonalbot%2Fseasonalbot-master%2Fbot%2Fexts%2Fhalloween%2Fspookysound.py
 
-        await ctx.send('Now playing: {}'.format(query))
+        await ctx.send('Now playing: {}'.format(fileName))
 
 
     @commands.command()
@@ -58,7 +61,7 @@ class sound(commands.Cog):
         await ctx.voice_client.disconnect()
 
     @play.before_invoke
-    async def ensure_voice(self, ctx):
+    async def ensureVoice(self, ctx):
         if ctx.voice_client is None:
             if ctx.author.voice:
                 await ctx.author.voice.channel.connect()
@@ -69,42 +72,33 @@ class sound(commands.Cog):
             ctx.voice_client.stop()
 
 
-   
-"""@bot.event
-async def on_message(message):
-    # we do not want the bot to reply to itself
-    if message.author == bot.user:
+@bot.listen("on_message")
+async def response(msg):
+    if msg.author == bot.user:
+        return
+    
+    if msg.content.lower() == ('template'):
+        responseMsg = 'Response'.format(msg)
+        print('template -> response to User:{0.author.name} ID:{0.author.id} in \"{0.guild}\" #{0.channel}'.format(msg))
+        await msg.channel.send(responseMsg, reference=msg, mention_author=False)
+        
+@bot.listen("on_command")
+async def beforeCommand(ctx):
+    if ctx.message.author == bot.user:
         return
         
     #Log all received messages
-    if message.author != bot.user:
-        print("Received Message: {0.content}".format(message))
-        print("From: {0.author.id} \n".format(message))
-        
-    #Test 
-    if message.content.lower() == ('template'):
-        msg = 'Response {0.author.mention}'.format(message)
-        print('Sending:')
-        print(msg + '\n')
-        await message.channel.send(msg)
-        
-		
-    if message.content.lower() == 'test':
-       voicestate = message.author.voice
-       print(voicestate.channel.name)
-       VoiceProtocol = await voicestate.channel.connect()
-       audio = await discord.FFmpegOpusAudio.from_probe("monsterkill.mp3")
-       VoiceProtocol.play(audio, after= lambda e: print("played audio", e))"""
-
-bot = commands.Bot(command_prefix=commands.when_mentioned_or("!"),
-                   description='Relatively simple test bot')
+    if ctx.message.author != bot.user:
+        print("Command:\"{0.content}\" From User:{0.author.name} ID:{0.author.id} in \"{0.guild}\" #{0.channel}".format(ctx.message))
         
 @bot.event
 async def on_ready():
     print('Logged in as')
     print(bot.user.name)
     print(bot.user.id)
-    print('--- Start Log ---')
+    print('--- Start Log --- \n')
 
 bot.add_cog(sound(bot))
 bot.run(TOKEN)
+
+

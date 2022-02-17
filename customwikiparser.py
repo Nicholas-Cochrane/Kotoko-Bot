@@ -4,7 +4,6 @@ from urllib.parse import urlparse
 import re
 import ssl
 import json
-import gtts
 from playsound import playsound
 
 from io import StringIO
@@ -52,8 +51,20 @@ def wikitextClean(str):
     newStr = ''.join(temp).replace('@inside@','').replace('=','').replace('\'\'\'','')#remove fromating like == and ''' 
     return re.sub('(\s*)\n','\n',re.sub('(\n(!|\|).*?(\n|\Z)((!|\|).*?(\n|\Z))*)|({\|).*','\n',re.sub('__.*?__','',newStr))) #Remove extra whitespace(remove lines for wikitables including any line starting with ! or | (remove __X__ ex: __TOC__))
 
-
-def wikimediaURLToText(URL):
+def wikiURLParse(page):
+    """"Returns a tuple of (domain, filename) """
+    parsedPage = urlparse(page)
+    splitPath = re.split('/',parsedPage.path)
+    if(not parsedPage.netloc): #if url does not start with scheme
+        if(parsedPage.path):
+           netloc = splitPath[0]
+        else:
+            raise("Not a valid URL")
+    else:
+        netloc = parsedPage.netloc
+    return netloc, splitPath[-1]
+    
+def wikimediaURLToText(page):
     """Takes in a Wikipedia or Wikimedia Wiki page URL and outputs the first text (extract) for wikipedia and atempts to parse a large part of the page for non wikipedia pages"""
     parsedPage = urlparse(page)
     splitPath = re.split('/',parsedPage.path)
@@ -105,7 +116,7 @@ def wikimediaURLToText(URL):
                        finalTexts.append(pageObj2['query']['pages'][key]['title'] + ' at ' + netloc + wikitextClean(strip_tags(pageObj4['expandtemplates']['wikitext'])))
     return finalTexts[0]
 
-page = input("Enter a Wikipedia or Wikimedia Wiki page URL:")
-print(wikimediaURLToText(page))
+test = input("Enter a Wikipedia or Wikimedia Wiki page URL:")
+print(wikimediaURLToText(test))
 #tts = gtts.gTTS(wikitextClean(strip_tags(pageObj4['expandtemplates']['wikitext'])))
 #tts.save("sounds/test.mp3")
