@@ -5,6 +5,8 @@ import re
 import ssl
 import json
 from playsound import playsound
+import aiohttp
+import asyncio
 
 from io import StringIO
 from html.parser import HTMLParser
@@ -28,7 +30,7 @@ def strip_tags(html):
     s.feed(html)
     return s.get_data()
 
-def wikitextClean(str):
+async def wikitextClean(str):
     """clean up wikitext (Wikimedia and Wikipedia)byexpanding templates and clean up resulting html, Cleaning up links [[A|B]], removing '=*'(Header notation), TOCs, wikitables and \'\'\'(Bold notation) """
     markedStr = str.replace('[[','[[@inside@') #add marker for inside of link and clean up &'s from link safe to normal
     temp = re.split('\[\[|\]\]',markedStr) #split on links [[X]] -> X
@@ -65,7 +67,7 @@ def wikiURLParse(page):
         netloc = parsedPage.netloc
     return netloc, splitPath[-1]
     
-def wikimediaURLToText(page):
+async def wikimediaURLToText(page):
     """Takes in a Wikipedia or Wikimedia Wiki page URL and outputs the first text (extract) for wikipedia and atempts to parse a large part of the page for non wikipedia pages"""
     parsedPage = urlparse(page)
     splitPath = re.split('/',parsedPage.path)
@@ -82,41 +84,47 @@ def wikimediaURLToText(page):
     #TODO add in ability to select sections (EX: Seattle#Media)
     if(netloc[-13:] == 'wikipedia.org'):#wikipedia use a different url to wikimedia and has different capibilities
         requestURL = 'https://{}/w/api.php?action=query&format=json&titles={}&prop=extracts&exintro&explaintext'.format(netloc,splitPath[-1])
-        with urllib.request.urlopen(requestURL) as f:
-            pageObj = json.loads(f.read())
-            for key, value in pageObj['query']['pages'].items():
-                #TODO add error handling for json return
-                #TODO add revisions non extracts verson for wikipedia
-                #print("\n")
-                #print(pageObj['query']['pages'][key]['title'])
-                #print(pageObj['query']['pages'][key]['extract'])
-                finalTexts.append(pageObj['query']['pages'][key]['title'] + ' From Wikipedia, the free encyclopedia at ' + netloc + '\n' + pageObj['query']['pages'][key]['extract']) #id="siteSub" is the "from wikipedia" div if you want to add muli lingual options in the future
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
+            async with session.get(requestURL) as f:
+                if f.status != 200: raise RuntimeError("Page Status: " + str(f.status))
+                pageObj = json.loads(await f.text())
+                for key, value in pageObj['query']['pages'].items():
+                    if key == -1: raise runtimeError("Wikipedia pages does not exits")
+                    #TODO add error handling for json return
+                    #TODO add revisions non extracts verson for wikipedia
+                    finalTexts.append(pageObj['query']['pages'][key]['title'] + ' From Wikipedia, the free encyclopedia at ' + netloc + '\n' + pageObj['query']['pages'][key]['extract']) #id="siteSub" is the "from wikipedia" div if you want to add muli lingual options in the future
     else:
         requestURL = 'https://{}/api.php?action=query&prop=revisions&rvprop=content&format=json&titles={}'.format(netloc,splitPath[-1])
         #with user agent defined as mozilla to avoid simple bot detection
-        req = urllib.request.Request(requestURL)
         #Customize the default User-Agent header value:
-        req.add_header('User-Agent', 'Mozilla/5.0')
-        with urllib.request.urlopen(req) as r:
-            pageObj2 = json.loads(r.read())
-            for key, value in pageObj2['query']['pages'].items():
-                #print("\n")
-                #print(pageObj2['query']['pages'][key]['title'])
-                wikiText = pageObj2['query']['pages'][key]['revisions'][0]['*']
-                #print(wikitextClean(pageObj2['query']['pages'][key]['revisions'][0]['*']))
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False), headers={'User-Agent': 'Mozilla/5.0'}) as session:
+            async with session.get(requestURL) as r:
+                if r.status != 200: raise RuntimeError("Page Status: " + str(r.status))
+                pageObj2 = json.loads(await r.text())
+                for key, value in pageObj2['query']['pages'].items():
+                    if key == -1: raise runtimeError("Wikipedia pages does not exits")
+                    wikiText = pageObj2['query']['pages'][key]['revisions'][0]['*']
 
-                req3 = urllib.request.Request("https://{}/api.php?action=expandtemplates&format=json&prop=wikitext&title={}&text={}".format(netloc,splitPath[-1],urllib.parse.quote_plus(wikiText)[:8000]))
-                req3.add_header('User-Agent', 'Mozilla/5.0')
-                with urllib.request.urlopen(req3) as r3:
-                    pageObj4 = json.loads(r3.read())
-                    for key4, value4 in pageObj4['expandtemplates'].items():
-                       #print('pre wikitext func')
-                       #print((pageObj4['expandtemplates']['wikitext']))
-                       #print('post')
-                       #print(wikitextClean(strip_tags(pageObj4['expandtemplates']['wikitext'])))
-                       finalTexts.append(pageObj2['query']['pages'][key]['title'] + ' at ' + netloc + wikitextClean(strip_tags(pageObj4['expandtemplates']['wikitext'])))
+                    req3 = "https://{}/api.php?action=expandtemplates&format=json&prop=wikitext&title={}&text={}".format(netloc,splitPath[-1],urllib.parse.quote_plus(wikiText)[:8000])
+                    async with session.get(req3) as r3:
+                        pageObj4 = json.loads(await r3.text())
+                        for key4, value4 in pageObj4['expandtemplates'].items():
+                           #print('pre wikitext func')
+                           #print((pageObj4['expandtemplates']['wikitext']))
+                           #print('post')
+                           #print(wikitextClean(strip_tags(pageObj4['expandtemplates']['wikitext'])))
+                           cleanedText = await wikitextClean(strip_tags(pageObj4['expandtemplates']['wikitext']))
+                           finalTexts.append(pageObj2['query']['pages'][key]['title'] + ' at ' + netloc + cleanedText)
+    #TODO shorten to nearest sentence 
     return finalTexts[0]
-#test = input("Enter a Wikipedia or Wikimedia Wiki page URL:")
-#print(wikimediaURLToText(test))
-#tts = gtts.gTTS(wikitextClean(strip_tags(pageObj4['expandtemplates']['wikitext'])))
-#tts.save("sounds/test.mp3")
+
+async def main():
+    testURL = input("Enter a Wikipedia or Wikimedia Wiki page URL:")
+    output = await wikimediaURLToText(testURL)
+    print(output)
+    
+if __name__ == "__main__":
+    asyncio.run(main())
+
+
+
