@@ -6,6 +6,14 @@ import asyncgTTS
 import aiohttp
 import customwikiparser as wikiparser
 from discord.ext import commands
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('discord')
+"""logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)"""
 
 print("Starting Bot...")
 #print(os.environ)
@@ -15,7 +23,8 @@ if TOKEN == None:
     raise Exception("No token was found.")
 
 bot = commands.Bot(command_prefix=commands.when_mentioned_or("!"),
-                   description='Relatively simple test bot')
+                   description='A cute and not at all helpful bot that I made for fun!',
+                   activity=discord.Game(name='Head Empty'))
 
 
 async def disconnectFromCTX(ctx):
@@ -33,6 +42,7 @@ class sound(commands.Cog):
 
     @commands.command()
     async def test(self, ctx):
+        """Print 'test'"""
         await ctx.send("test")
 
     @commands.command()
@@ -56,13 +66,10 @@ class sound(commands.Cog):
         #https://www.programcreek.com/python/?code=python-discord%2Fseasonalbot%2Fseasonalbot-master%2Fbot%2Fexts%2Fhalloween%2Fspookysound.py
 
         await ctx.send('Now playing: {}'.format(fileName))
-    @commands.command()
-    async def wikitext(self, ctx, *, URL):
-        text = await wikiparser.wikimediaURLToText(URL)
-        await ctx.message.channel.send(text[:2000], reference=ctx.message, mention_author=False)
         
     @commands.command()
     async def wikispeak(self, ctx, *, URL):
+        """Join a voice Channel and read a wikimedia page"""
         if ctx.voice_client is None:
             return
         
@@ -128,6 +135,12 @@ class sound(commands.Cog):
                 #raise commands.CommandError("Author not connected to a voice channel.")
         elif ctx.voice_client.is_playing():
             ctx.voice_client.stop()
+
+@commands.command()
+async def wikitext(self, ctx, *, URL):
+    """Print the contents of a wikimedia page to chat"""
+    text = await wikiparser.wikimediaURLToText(URL)
+    await ctx.message.channel.send(text[:2000], reference=ctx.message, mention_author=False)
 
 
 @bot.listen("on_message")
