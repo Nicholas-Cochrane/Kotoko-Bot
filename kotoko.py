@@ -10,6 +10,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('discord')
+
 """logger.setLevel(logging.DEBUG)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
@@ -28,7 +29,7 @@ bot = commands.Bot(command_prefix=commands.when_mentioned_or("!"),
 
 
 async def disconnectFromCTX(ctx):
-    if not ctx.voice_client.is_playing():
+    if ctx != None and ctx.voice_client != None and not ctx.voice_client.is_playing():
         await ctx.voice_client.disconnect()
 
 async def testAsync():
@@ -52,12 +53,11 @@ class sound(commands.Cog):
         if ctx.voice_client is not None:
             return await ctx.voice_client.move_to(channel)
 
-        await channel.connect()
+        await channel.connect(timeout = 10.0, reconnect=False)
 
     @commands.command()
     async def play(self, ctx, *, fileName):
         """Plays a file from the local filesystem"""
-
         if ctx.voice_client is None:
             return
         
@@ -70,7 +70,7 @@ class sound(commands.Cog):
     @commands.command()
     async def wikispeak(self, ctx, *, URL):
         """Join a voice Channel and read a wikimedia page"""
-        if ctx.voice_client is None:
+        if ctx.voice_client is None: #Should have joined channel with ensureVoice() @wikispeak.before_invoke
             return
         
         try:
@@ -129,7 +129,8 @@ class sound(commands.Cog):
     async def ensureVoice(self, ctx):
         if ctx.voice_client is None:
             if ctx.author.voice:
-                await ctx.author.voice.channel.connect()
+                await ctx.author.voice.channel.connect(timeout = 10.0,reconnect=False) #Time out set to 10sec. Will time out if force disconnected by user (but also due to any other loss of connection)
+                await ctx.guild.change_voice_state(channel=ctx.author.voice.channel, self_deaf=True)
             else:
                 await ctx.send("You are not connected to a voice channel.")
                 #raise commands.CommandError("Author not connected to a voice channel.")
@@ -168,6 +169,8 @@ async def on_ready():
     print(bot.user.name)
     print(bot.user.id)
     print('--- Start Log --- \n')
+
+    
 
 bot.add_cog(sound(bot))
 bot.run(TOKEN)
